@@ -1,6 +1,3 @@
-# Leader-key launcher: a wlr-which-key menu whose entries mmsg-dispatch
-# back into the running mango. Takes the mango package so its bin/ can be
-# prepended to PATH (that's where the menu's `mmsg` resolves from).
 {
   pkgs,
   mango,
@@ -28,5 +25,8 @@
 in
   pkgs.writeShellScriptBin "mango-leader" ''
     export PATH=${mango}/bin:$PATH
-    exec ${pkgs.wlr-which-key}/bin/wlr-which-key ${whichKeyConfig}
+    # Only one leader menu at a time. Flock holds the lock for the lifetime of
+    # wlr-which-key, so extra key presses while it is open become no-ops.
+    exec ${pkgs.util-linux}/bin/flock -n ''${XDG_RUNTIME_DIR:-/tmp}/mango-leader.lock \
+      ${pkgs.wlr-which-key}/bin/wlr-which-key ${whichKeyConfig}
   ''
