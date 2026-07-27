@@ -14,6 +14,12 @@
     inputs.nixpkgs.follows = "nixpkgs";
   };
 
+  # Vicinae, a native launcher bound to super+d.
+  inputs.vicinae = {
+    url = "github:vicinaehq/vicinae";
+    inputs.nixpkgs.follows = "nixpkgs";
+  };
+
   outputs = {
     self,
     nixpkgs,
