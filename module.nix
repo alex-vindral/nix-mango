@@ -60,8 +60,9 @@ in {
     pkgs.waybar
   ];
 
-  # leader: bindr = fire on RELEASE, so key-repeat can't re-spawn the menu
   config.settings.bindr = [
-    "NONE,code:64,spawn,${lib.getExe mangoLeader}" # tap Left-Alt (code:64)
+    # Left-Alt (code:64)
+    "ALT,code:64,spawn,${lib.getExe mangoLeader}"
+    "NONE,code:64,spawn,${lib.getExe mangoLeader}"
   ];
 }
