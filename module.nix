@@ -63,6 +63,6 @@ in {
   config.settings.bindr = [
     # Left-Alt (code:64)
     "ALT,code:64,spawn,${lib.getExe mangoLeader}"
-    "NONE,code:64,spawn,${lib.getExe mangoLeader}"
+    # "NONE,code:64,spawn,${lib.getExe mangoLeader}"
   ];
 }
