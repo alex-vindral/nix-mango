@@ -1,0 +1,96 @@
+Add an `ignore_fullscreen` window rule.
+
+Mango already lets a rule drop client-driven maximize/minimize requests
+(ignore_maximize, ignore_minimize), but xdg_toplevel.set_fullscreen is always
+honoured, so a browser going fullscreen for a video drags the whole window into
+the compositor's fullscreen state.
+
+With ignore_fullscreen:1 the request is acknowledged instead of acted on: the
+client is told it is fullscreen (so it renders fullscreen content) while the
+window keeps whatever state the user put it in - fake fullscreen, on demand.
+A window the user has really fullscreened stays fullscreen either way.
+
+--- a/src/mango.c
++++ b/src/mango.c
+@@ -376,8 +376,8 @@
+ 	struct wlr_foreign_toplevel_handle_v1 *foreign_toplevel;
+ 	int32_t isfloating, isurgent, isfullscreen, isfakefullscreen,
+ 		need_float_size_reduce, isminimized, isoverlay, isnosizehint,
+-		ignore_maximize, ignore_minimize, idleinhibit_when_focus,
+-		vrr_only_fullscreen;
++		ignore_maximize, ignore_minimize, ignore_fullscreen,
++		idleinhibit_when_focus, vrr_only_fullscreen;
+ 	int32_t ismaximizescreen;
+ 	int32_t overview_backup_bw;
+ 	int32_t fullscreen_backup_x, fullscreen_backup_y, fullscreen_backup_w,
+@@ -1604,6 +1604,7 @@
+ 	APPLY_INT_PROP(c, r, shield_when_capture);
+ 	APPLY_INT_PROP(c, r, ignore_maximize);
+ 	APPLY_INT_PROP(c, r, ignore_minimize);
++	APPLY_INT_PROP(c, r, ignore_fullscreen);
+ 	APPLY_INT_PROP(c, r, isnosizehint);
+ 	APPLY_INT_PROP(c, r, idleinhibit_when_focus);
+ 	APPLY_INT_PROP(c, r, vrr_only_fullscreen);
+@@ -1819,7 +1820,8 @@
+ 	}
+
+ 	int32_t fullscreen_state_backup =
+-		c->isfullscreen || client_wants_fullscreen(c);
++		c->isfullscreen ||
++		(!c->ignore_fullscreen && client_wants_fullscreen(c));
+
+ 	bool should_init_get_focus =
+ 		!c->isopensilent &&
+@@ -4192,6 +4194,17 @@
+ 	if (!c || c->iskilling)
+ 		return;
+
++	/* Don't let the client drive the window state. Acknowledge the request so
++	 * it renders fullscreen content (video players, games) inside the geometry
++	 * it already has, and leave floating/tiled/fullscreen up to the user. */
++	if (c->ignore_fullscreen) {
++		if (c->isfullscreen)
++			client_set_fullscreen(c, 1);
++		else
++			setfakefullscreen(c, client_wants_fullscreen(c));
++		return;
++	}
++
+ 	setfullscreen(c, client_wants_fullscreen(c), true);
+ }
+
+@@ -4676,6 +4689,7 @@
+ 	c->isnoshadow = 0;
+ 	c->ignore_maximize = 1;
+ 	c->ignore_minimize = 1;
++	c->ignore_fullscreen = 0;
+ 	c->iscustomsize = 0;
+ 	c->iscustompos = 0;
+ 	c->iscustom_scroller_proportion = 0;
+--- a/src/config/parse_config.h
++++ b/src/config/parse_config.h
+@@ -83,6 +83,7 @@
+ 	int32_t allow_shortcuts_inhibit;
+ 	int32_t ignore_maximize;
+ 	int32_t ignore_minimize;
++	int32_t ignore_fullscreen;
+ 	int32_t isnosizehint;
+ 	int32_t idleinhibit_when_focus;
+ 	int32_t vrr_only_fullscreen;
+@@ -2411,6 +2412,7 @@
+ 		rule->allow_shortcuts_inhibit = -1;
+ 		rule->ignore_maximize = -1;
+ 		rule->ignore_minimize = -1;
++		rule->ignore_fullscreen = -1;
+ 		rule->isnosizehint = -1;
+ 		rule->idleinhibit_when_focus = -1;
+ 		rule->vrr_only_fullscreen = -1;
+@@ -2524,6 +2526,8 @@
+ 					rule->ignore_maximize = atoi(val);
+ 				} else if (strcmp(key, "ignore_minimize") == 0) {
+ 					rule->ignore_minimize = atoi(val);
++				} else if (strcmp(key, "ignore_fullscreen") == 0) {
++					rule->ignore_fullscreen = atoi(val);
+ 				} else if (strcmp(key, "isnosizehint") == 0) {
+ 					rule->isnosizehint = atoi(val);
+ 				} else if (strcmp(key, "idleinhibit_when_focus") == 0) {

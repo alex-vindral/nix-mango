@@ -9,8 +9,14 @@ inputs: {
 in {
   imports = [wlib.wrapperModules.mangowc];
 
-  # Use the flake version of mango
-  config.package = inputs.mangowm.packages.${pkgs.stdenv.hostPlatform.system}.mango;
+  # Use the flake version of mango, plus the `ignore_fullscreen` window rule
+  # (not upstream yet) that keeps client fullscreen requests from resizing the
+  # window - see mango/behavior.conf.
+  config.package =
+    inputs.mangowm.packages.${pkgs.stdenv.hostPlatform.system}.mango.overrideAttrs
+    (old: {
+      patches = (old.patches or []) ++ [./patches/ignore-fullscreen-windowrule.patch];
+    });
 
   # Mango config
   config.sourcedFiles = [
